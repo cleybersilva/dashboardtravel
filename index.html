@@ -248,7 +248,49 @@
   .btn-secundario{background:var(--surface-2); color:var(--text); border:1px solid var(--line);}
   .msg-erro{color:var(--bad); font-size:12.5px; margin-top:8px; display:none;}
 
-  footer{text-align:center; color:var(--muted); font-size:12px; margin-top:26px;}
+  footer{margin-top:36px;}
+  .footer-linha{
+    height:1px; margin-bottom:22px;
+    background:linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
+  }
+  .footer-conteudo{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    margin-bottom:16px;
+  }
+  .footer-status{
+    display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px;
+  }
+  .footer-selos{display:flex; gap:8px; flex-wrap:wrap;}
+  .selo{
+    font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.03em;
+    color:var(--muted); background:rgba(255,255,255,.03); border:1px solid var(--line);
+    padding:4px 10px; border-radius:999px; transition:.2s;
+  }
+  .selo:hover{color:var(--sky); border-color:rgba(79,163,209,.35);}
+  .footer-marca{
+    text-align:center; color:var(--muted); font-size:11px; opacity:.6;
+    font-family:'Playfair Display',serif; letter-spacing:.02em;
+  }
+  @media (max-width:640px){
+    .footer-conteudo{flex-direction:column; align-items:flex-start;}
+  }
+
+  /* ---- Cabecalho ---- */
+  .header-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .brand-mark{
+    width:40px; height:40px; border-radius:12px; overflow:hidden;
+    border:1px solid var(--line); box-shadow:0 6px 18px rgba(0,0,0,.35);
+    animation:flutuar 5s ease-in-out infinite;
+  }
+  .brand-mark svg{display:block; width:100%; height:100%;}
+  @keyframes flutuar{0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);}}
+  .live-indicator{
+    display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--muted);
+    font-family:'JetBrains Mono',monospace; letter-spacing:.02em;
+    background:rgba(92,184,138,.08); border:1px solid rgba(92,184,138,.25);
+    padding:6px 12px; border-radius:999px;
+  }
+  @media (prefers-reduced-motion: reduce){ .brand-mark{animation:none;} }
 </style>
 </head>
 <body>
@@ -256,6 +298,27 @@
 <div class="wrap">
 
   <header>
+    <div class="header-top">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#101B34"/><stop offset="1" stop-color="#0A1220"/>
+            </linearGradient>
+            <linearGradient id="logoGold" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#B9832F"/><stop offset="1" stop-color="#F4D28A"/>
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="15" fill="url(#logoBg)"/>
+          <path d="M10 44 Q 28 50 33 30 Q 37 13 53 17" fill="none" stroke="url(#logoGold)" stroke-width="4.6" stroke-linecap="round"/>
+          <g transform="translate(53,17) rotate(-28)">
+            <path d="M0 -9 L3 3 L11 6 L11 9.5 L3 7.5 L1.5 13 L4.5 14.5 L4.5 17 L0 15.5 L-4.5 17 L-4.5 14.5 L-1.5 13 L-3 7.5 L-11 9.5 L-11 6 L-3 3 Z" fill="url(#logoGold)"/>
+          </g>
+          <circle cx="10" cy="44" r="3.4" fill="#5FB2E0"/>
+        </svg>
+      </div>
+      <div class="live-indicator"><span class="dot"></span>Sistema ativo</div>
+    </div>
     <div class="eyebrow">Varredura automática · a cada 1 hora</div>
     <h1>Dashboard <span>Travel</span></h1>
     <div class="sub">Acompanhe vários destinos ao mesmo tempo</div>
@@ -311,7 +374,22 @@
     <button type="button" id="btn-reabrir-ofertas">Mostrar novamente</button>
   </div>
 
-  <footer>Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam a cada 1h via N8N</footer>
+  <footer>
+    <div class="footer-linha"></div>
+    <div class="footer-conteudo">
+      <div class="footer-status">
+        <span class="dot"></span>
+        Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam a cada 1h via N8N
+      </div>
+      <div class="footer-selos">
+        <span class="selo">N8N</span>
+        <span class="selo">Supabase</span>
+        <span class="selo">Travelpayouts</span>
+        <span class="selo">Claude · ChatGPT</span>
+      </div>
+    </div>
+    <div class="footer-marca">Dashboard Travel — monitor pessoal de passagens aéreas</div>
+  </footer>
 </div>
 
 <!-- Modal: adicionar destino -->
