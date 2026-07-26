@@ -415,7 +415,6 @@
       <div class="campo"><label>Data de ida</label><input id="in-data-ida" type="date"></div>
       <div class="campo"><label>Data de volta</label><input id="in-data-volta" type="date"></div>
     </div>
-    <div class="campo"><label>Senha</label><input id="in-senha" type="password" placeholder="••••••"></div>
     <div class="msg-erro" id="msg-erro">Preencha todos os campos corretamente.</div>
     <div class="botoes">
       <button class="btn-secundario" onclick="fecharModal()">Cancelar</button>
@@ -669,14 +668,8 @@ async function adicionarDestino(){
   const destino = document.getElementById('in-destino').value.trim().toUpperCase();
   const dataIda = document.getElementById('in-data-ida').value;
   const dataVolta = document.getElementById('in-data-volta').value;
-  const senha = document.getElementById('in-senha').value;
   const msgErro = document.getElementById('msg-erro');
 
-  if (senha !== SENHA_DESTINO) {
-    msgErro.textContent = 'Senha incorreta.';
-    msgErro.style.display = 'block';
-    return;
-  }
   if (!origem || !destino) {
     msgErro.textContent = 'Escolha origem e destino na lista que aparece ao digitar.';
     msgErro.style.display = 'block';
