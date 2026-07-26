@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Travel</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0A1220">
 <!-- Travelpayouts Drive - instalacao manual conforme painel oficial -->
 <script nowprocket data-noptimize="1" data-cfasync="false" data-wpfc-render="false" seraph-accel-crit="1" data-no-defer="1">
   (function () {
@@ -73,6 +78,15 @@
   .stat .value{font-family:'Playfair Display',serif; font-size:24px; margin-top:6px; font-weight:700;}
   .stat.highlight{border-color:rgba(212,168,67,.4); background:linear-gradient(160deg, rgba(212,168,67,.08), var(--surface));}
   .stat.highlight .value{color:var(--gold);}
+  .tendencia{font-size:11.5px; margin-top:4px; font-weight:600;}
+  .tendencia.queda{color:var(--good);}
+  .tendencia.alta{color:var(--bad);}
+  .tendencia.neutra{color:var(--muted);}
+  .fonte-badge{
+    font-size:10.5px; color:var(--sky); background:rgba(79,163,209,.12);
+    border:1px solid rgba(79,163,209,.3); border-radius:999px; padding:2px 8px;
+    white-space:nowrap;
+  }
 
   .panel{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:20px;}
   .panel h2{font-family:'Playfair Display',serif; font-size:17px; margin-bottom:14px; font-weight:700;}
@@ -169,9 +183,14 @@
   </div>
 
   <div class="stats">
-    <div class="stat highlight"><div class="label">Melhor preço encontrado</div><div class="value" id="melhor-preco">—</div></div>
+    <div class="stat highlight">
+      <div class="label">Melhor preço encontrado</div>
+      <div class="value" id="melhor-preco">—</div>
+      <div class="tendencia" id="tendencia"></div>
+    </div>
     <div class="stat"><div class="label">Companhia</div><div class="value" id="melhor-cia" style="font-size:17px;">—</div></div>
-    <div class="stat"><div class="label">Ofertas registradas</div><div class="value" id="total-ofertas">—</div></div>
+    <div class="stat"><div class="label">Preço médio</div><div class="value" id="preco-medio" style="font-size:20px;">—</div></div>
+    <div class="stat"><div class="label">Verificações registradas</div><div class="value" id="total-ofertas">—</div></div>
   </div>
 
   <div class="panel">
@@ -182,8 +201,8 @@
   <div class="panel">
     <h2>Últimas ofertas encontradas</h2>
     <table>
-      <thead><tr><th>Preço</th><th>Cia aérea</th><th>Paradas</th><th>Encontrado em</th><th></th></tr></thead>
-      <tbody id="tabela-corpo"><tr><td colspan="5" class="empty">Configure SUPABASE_URL e SUPABASE_ANON_KEY no código.</td></tr></tbody>
+      <thead><tr><th>Preço</th><th>Cia aérea</th><th>Paradas</th><th>Fonte</th><th>Encontrado em</th><th></th></tr></thead>
+      <tbody id="tabela-corpo"><tr><td colspan="6" class="empty">Configure SUPABASE_URL e SUPABASE_ANON_KEY no código.</td></tr></tbody>
     </table>
   </div>
 
@@ -513,10 +532,12 @@ async function removerDestino(d){
       document.getElementById('melhor-preco').textContent = '—';
       document.getElementById('melhor-cia').textContent = '—';
       document.getElementById('total-ofertas').textContent = '0';
+      document.getElementById('preco-medio').textContent = '—';
+      document.getElementById('tendencia').textContent = '';
       document.getElementById('ultima-atualizacao').textContent = '—';
       document.getElementById('proxima-varredura').textContent = '—';
       document.getElementById('tabela-corpo').innerHTML =
-        '<tr><td colspan="5" class="empty">Nenhum destino monitorado. Clique em "+ adicionar destino".</td></tr>';
+        '<tr><td colspan="6" class="empty">Nenhum destino monitorado. Clique em "+ adicionar destino".</td></tr>';
       if (chart) { chart.destroy(); chart = null; }
     }
   } catch (err) {
@@ -578,15 +599,30 @@ async function carregarOfertas(){
   document.getElementById('rota-origem').textContent = destinoAtual.origem;
   document.getElementById('rota-destino').textContent = destinoAtual.destino;
 
+  // Mostra a ultima tentativa de verificacao mesmo que nao tenha achado oferta —
+  // e mais honesto do que so atualizar quando ha dado (evita parecer "parado").
+  if (destinoAtual.ultima_tentativa) {
+    document.getElementById('ultima-atualizacao').textContent = formatarHora(destinoAtual.ultima_tentativa);
+    proximaVarreduraTimestamp = new Date(destinoAtual.ultima_tentativa).getTime() + 60*60*1000;
+  } else {
+    document.getElementById('ultima-atualizacao').textContent = 'ainda não verificado';
+    proximaVarreduraTimestamp = null;
+  }
+
   try {
     const ofertas = await supaGet(`ofertas_voos?select=*&destino_id=eq.${destinoAtivoId}&order=encontrado_em.desc&limit=30`);
 
     if (!ofertas.length) {
-      document.getElementById('tabela-corpo').innerHTML = '<tr><td colspan="5" class="empty">Nenhuma oferta registrada ainda para este destino.</td></tr>';
+      const msg = destinoAtual.ultima_tentativa
+        ? 'Já foi verificado, mas nenhuma oferta foi encontrada nesta rota até agora.'
+        : 'Aguardando a primeira varredura do N8N para este destino.';
+      document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="6" class="empty">${msg}</td></tr>`;
       document.getElementById('melhor-preco').textContent = '—';
       document.getElementById('melhor-cia').textContent = '—';
       document.getElementById('total-ofertas').textContent = '0';
-      if (chart) chart.destroy();
+      document.getElementById('tendencia').textContent = '';
+      document.getElementById('preco-medio').textContent = '—';
+      if (chart) { chart.destroy(); chart = null; }
       return;
     }
 
@@ -594,14 +630,35 @@ async function carregarOfertas(){
     document.getElementById('melhor-preco').textContent = formatarBRL(melhor.preco);
     document.getElementById('melhor-cia').textContent = melhor.cia_aerea || '—';
     document.getElementById('total-ofertas').textContent = ofertas.length;
-    document.getElementById('ultima-atualizacao').textContent = formatarHora(ofertas[0].encontrado_em);
-    proximaVarreduraTimestamp = new Date(ofertas[0].encontrado_em).getTime() + 60*60*1000;
+
+    // Preco medio das ultimas verificacoes
+    const media = ofertas.reduce((s,o)=>s+Number(o.preco),0) / ofertas.length;
+    document.getElementById('preco-medio').textContent = formatarBRL(media);
+
+    // Tendencia: compara a oferta mais recente com a anterior
+    const tendEl = document.getElementById('tendencia');
+    if (ofertas.length >= 2) {
+      const atual = Number(ofertas[0].preco), anterior = Number(ofertas[1].preco);
+      const diff = atual - anterior;
+      const pct = anterior ? Math.abs(diff/anterior*100) : 0;
+      if (Math.abs(diff) < 1) { tendEl.textContent = '— estável'; tendEl.className = 'tendencia neutra'; }
+      else if (diff < 0) { tendEl.textContent = `↓ caiu ${pct.toFixed(1)}%`; tendEl.className = 'tendencia queda'; }
+      else { tendEl.textContent = `↑ subiu ${pct.toFixed(1)}%`; tendEl.className = 'tendencia alta'; }
+    } else {
+      tendEl.textContent = ''; tendEl.className = 'tendencia';
+    }
+
+    const FONTE_LABEL = {
+      travelpayouts_exato: 'Travelpayouts', travelpayouts_mes: 'Travelpayouts (mês)',
+      travelpayouts_livre: 'Travelpayouts (aprox.)', rapidapi_skyscanner: 'Skyscanner'
+    };
 
     document.getElementById('tabela-corpo').innerHTML = ofertas.slice(0,10).map(o => `
       <tr>
         <td class="preco-cell">${formatarBRL(o.preco)}</td>
         <td>${o.cia_aerea || '—'}</td>
         <td>${o.numero_paradas ?? '—'}</td>
+        <td><span class="fonte-badge">${FONTE_LABEL[o.fonte] || o.fonte || '—'}</span></td>
         <td>${formatarHora(o.encontrado_em)}</td>
         <td>${o.link_reserva ? `<a class="link" href="${o.link_reserva}" target="_blank">reservar →</a>` : ''}</td>
       </tr>
@@ -629,7 +686,7 @@ async function carregarOfertas(){
       }
     });
   } catch (err) {
-    document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="5" class="empty">Erro: ${err.message}</td></tr>`;
+    document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="6" class="empty">Erro: ${err.message}</td></tr>`;
   }
 }
 
