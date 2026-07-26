@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="aeroportos.js"></script>
 <style>
   :root{
     --bg:#0B1220; --surface:#111B2E; --surface-2:#16243B; --line:#22314C;
@@ -94,6 +95,30 @@
   }
   .campo input:focus{outline:none; border-color:var(--sky);}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  /* ---- Autocomplete de aeroportos ---- */
+  .ac-wrap{position:relative;}
+  .ac-lista{
+    display:none; position:absolute; left:0; right:0; top:100%; z-index:60;
+    background:#0E1830; border:1px solid var(--line); border-radius:10px;
+    max-height:230px; overflow-y:auto; margin-top:4px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .ac-lista.aberta{display:block;}
+  .ac-item{padding:9px 12px; cursor:pointer; border-bottom:1px solid rgba(34,49,76,.6);}
+  .ac-item:last-child{border-bottom:none;}
+  .ac-item:hover, .ac-item.ativo{background:rgba(79,163,209,.14);}
+  .ac-item .ac-cod{
+    font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--gold);
+    font-size:12.5px; margin-right:8px;
+  }
+  .ac-item .ac-cidade{font-size:13.5px; color:var(--text);}
+  .ac-item .ac-meta{display:block; font-size:11px; color:var(--muted); margin-top:2px;}
+  .ac-vazio{padding:11px 12px; color:var(--muted); font-size:12.5px;}
+  .ac-sel{
+    display:none; margin-top:6px; font-size:12px; color:var(--good);
+  }
+  .ac-sel.ok{display:block;}
   .botoes{display:flex; gap:10px; margin-top:18px;}
   button{
     font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; border:none;
@@ -110,7 +135,7 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">Varredura automática · rodízio a cada 8h</div>
+    <div class="eyebrow">Varredura automática · a cada 1 hora</div>
     <h1>Monitor de <span>Voos</span></h1>
     <div class="sub">Acompanhe vários destinos ao mesmo tempo</div>
   </header>
@@ -150,7 +175,7 @@
     </table>
   </div>
 
-  <footer>Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam em rodízio (a cada 8h por destino ativo)</footer>
+  <footer>Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam a cada 1h via N8N</footer>
 </div>
 
 <!-- Modal: adicionar destino -->
@@ -158,9 +183,19 @@
   <div class="modal">
     <h3>Adicionar novo destino</h3>
     <div class="campo"><label>Nome (ex: Recife → Cancún)</label><input id="in-nome" type="text" placeholder="Recife -> Orlando (Disney)"></div>
-    <div class="row2">
-      <div class="campo"><label>Origem (IATA)</label><input id="in-origem" type="text" maxlength="3" placeholder="REC"></div>
-      <div class="campo"><label>Destino (IATA)</label><input id="in-destino" type="text" maxlength="3" placeholder="MCO"></div>
+    <div class="campo ac-wrap">
+      <label>Origem</label>
+      <input id="ac-origem" type="text" autocomplete="off" placeholder="Digite a cidade (ex: Recife)">
+      <input id="in-origem" type="hidden">
+      <div class="ac-lista" id="lista-origem"></div>
+      <div class="ac-sel" id="sel-origem"></div>
+    </div>
+    <div class="campo ac-wrap">
+      <label>Destino</label>
+      <input id="ac-destino" type="text" autocomplete="off" placeholder="Digite a cidade (ex: Orlando)">
+      <input id="in-destino" type="hidden">
+      <div class="ac-lista" id="lista-destino"></div>
+      <div class="ac-sel" id="sel-destino"></div>
     </div>
     <div class="row2">
       <div class="campo"><label>Data de ida</label><input id="in-data-ida" type="date"></div>
@@ -216,10 +251,145 @@ async function supaPost(path, body) {
 function formatarBRL(v){ return new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(v); }
 function formatarHora(iso){ return new Date(iso).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
 
+// ================= Autocomplete de aeroportos =================
+// Fonte: dataset OpenFlights (5.7 mil aeroportos com codigo IATA).
+// Formato de cada item: [IATA, cidade, pais, nome do aeroporto]
+function semAcento(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+
+// Nomes de cidades em portugues -> nome no dataset (que eh em ingles).
+// Nao eh exaustivo: cobre os destinos internacionais mais buscados.
+const ALIAS_PT = {
+ 'nova york':'new york','nova iorque':'new york','londres':'london','roma':'rome',
+ 'milao':'milan','veneza':'venice','florenca':'florence','napoles':'naples','turim':'turin',
+ 'genova':'genoa','zurique':'zurich','genebra':'geneva','munique':'munich','colonia':'cologne',
+ 'frankfurt':'frankfurt','bruxelas':'brussels','amsterda':'amsterdam','amsterdam':'amsterdam',
+ 'copenhague':'copenhagen','estocolmo':'stockholm','oslo':'oslo','helsinque':'helsinki',
+ 'varsovia':'warsaw','praga':'prague','viena':'vienna','budapeste':'budapest',
+ 'atenas':'athens','istambul':'istanbul','moscou':'moscow','sao petersburgo':'st petersburg',
+ 'lisboa':'lisbon','porto':'porto','sevilha':'seville','maiorca':'palma de mallorca',
+ 'palma de maiorca':'palma de mallorca','cidade do mexico':'mexico city','mexico':'mexico city',
+ 'toquio':'tokyo','pequim':'beijing','xangai':'shanghai','seul':'seoul','hanoi':'hanoi',
+ 'nova delhi':'delhi','bombaim':'mumbai','banguecoque':'bangkok','cingapura':'singapore',
+ 'cidade do cabo':'cape town','joanesburgo':'johannesburg','argel':'algiers','tunis':'tunis',
+ 'marraquexe':'marrakech','cairo':'cairo','nairobi':'nairobi',
+ 'assuncao':'asuncion','montevideu':'montevideo','santiago':'santiago','bogota':'bogota',
+ 'sao francisco':'san francisco','nova orleans':'new orleans','filadelfia':'philadelphia',
+ 'fenix':'phoenix','washington':'washington','boston':'boston','chicago':'chicago',
+ 'toronto':'toronto','montreal':'montreal','vancouver':'vancouver','havana':'havana',
+ 'genebra':'geneva','dublin':'dublin','edimburgo':'edinburgh','glasgow':'glasgow',
+ 'manchester':'manchester','barcelona':'barcelona','madri':'madrid','madrid':'madrid',
+ 'bilbau':'bilbao','valencia':'valencia','malaga':'malaga','nice':'nice','lyon':'lyon',
+ 'marselha':'marseille','toulouse':'toulouse','bordeus':'bordeaux','paris':'paris',
+ 'sidney':'sydney','melbourne':'melbourne','auckland':'auckland','wellington':'wellington'
+};
+
+function termosDeBusca(t){
+  const lista = [t];
+  Object.keys(ALIAS_PT).forEach(function(k){
+    if (k.indexOf(t) === 0 || k.indexOf(t) > -1) {
+      const v = semAcento(ALIAS_PT[k]);
+      if (lista.indexOf(v) === -1) lista.push(v);
+    }
+  });
+  return lista;
+}
+
+function montarAutocomplete(idInput, idHidden, idLista, idSel){
+  const inp = document.getElementById(idInput);
+  const hid = document.getElementById(idHidden);
+  const lista = document.getElementById(idLista);
+  const sel = document.getElementById(idSel);
+  let indiceAtivo = -1;
+  let resultados = [];
+
+  function fechar(){ lista.classList.remove('aberta'); indiceAtivo = -1; }
+
+  function escolher(item){
+    hid.value = item[0];
+    inp.value = item[1] + ' (' + item[0] + ')';
+    sel.textContent = '✓ ' + item[0] + ' — ' + item[3] + ', ' + item[2];
+    sel.classList.add('ok');
+    fechar();
+  }
+
+  function buscar(termo){
+    const dados = window.AEROPORTOS || [];
+    const t = semAcento(termo.trim());
+    if (t.length < 2) return [];
+    const termos = termosDeBusca(t);
+    const exatos = [], comeca = [], contem = [];
+    for (const a of dados) {
+      const cod = a[0].toLowerCase();
+      const cid = semAcento(a[1]);
+      const nom = semAcento(a[3]);
+      let onde = 0; // 1=exato, 2=comeca, 3=contem
+      for (const q of termos) {
+        if (cod === q) { onde = 1; break; }
+        if (cid.startsWith(q)) { onde = 2; break; }
+        if (cid.includes(q) || nom.includes(q) || cod.startsWith(q)) { if (!onde) onde = 3; }
+      }
+      if (onde === 1) exatos.push(a);
+      else if (onde === 2) comeca.push(a);
+      else if (onde === 3) contem.push(a);
+      if (exatos.length + comeca.length + contem.length > 400) break;
+    }
+    return exatos.concat(comeca, contem).slice(0, 40);
+  }
+
+  function render(){
+    if (!resultados.length) {
+      lista.innerHTML = '<div class="ac-vazio">Nenhum aeroporto encontrado. Tente o nome da cidade.</div>';
+      lista.classList.add('aberta');
+      return;
+    }
+    lista.innerHTML = resultados.map(function(a, i){
+      return '<div class="ac-item' + (i === indiceAtivo ? ' ativo' : '') + '" data-i="' + i + '">' +
+        '<span class="ac-cod">' + a[0] + '</span>' +
+        '<span class="ac-cidade">' + a[1] + '</span>' +
+        '<span class="ac-meta">' + a[3] + ' · ' + a[2] + '</span>' +
+      '</div>';
+    }).join('');
+    lista.classList.add('aberta');
+    [...lista.querySelectorAll('.ac-item')].forEach(function(el){
+      el.onmousedown = function(ev){ ev.preventDefault(); escolher(resultados[+el.dataset.i]); };
+    });
+  }
+
+  inp.addEventListener('input', function(){
+    hid.value = '';
+    sel.classList.remove('ok');
+    resultados = buscar(inp.value);
+    indiceAtivo = -1;
+    if (inp.value.trim().length < 2) { fechar(); return; }
+    render();
+  });
+
+  inp.addEventListener('keydown', function(e){
+    if (!lista.classList.contains('aberta')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); indiceAtivo = Math.min(indiceAtivo + 1, resultados.length - 1); render(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); indiceAtivo = Math.max(indiceAtivo - 1, 0); render(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (resultados[indiceAtivo >= 0 ? indiceAtivo : 0]) escolher(resultados[indiceAtivo >= 0 ? indiceAtivo : 0]);
+    }
+    else if (e.key === 'Escape') fechar();
+  });
+
+  inp.addEventListener('blur', function(){ setTimeout(fechar, 120); });
+}
+
 function abrirModal(){ document.getElementById('overlay-modal').classList.add('aberto'); }
 function fecharModal(){
   document.getElementById('overlay-modal').classList.remove('aberto');
   document.getElementById('msg-erro').style.display = 'none';
+  ['ac-origem','ac-destino','in-origem','in-destino','in-nome'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['sel-origem','sel-destino'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.classList.remove('ok');
+  });
 }
 
 async function adicionarDestino(){
@@ -236,8 +406,23 @@ async function adicionarDestino(){
     msgErro.style.display = 'block';
     return;
   }
-  if (!nome || origem.length !== 3 || destino.length !== 3 || !dataIda || !dataVolta) {
-    msgErro.textContent = 'Preencha todos os campos corretamente (códigos IATA com 3 letras).';
+  if (!origem || !destino) {
+    msgErro.textContent = 'Escolha origem e destino na lista que aparece ao digitar.';
+    msgErro.style.display = 'block';
+    return;
+  }
+  if (origem === destino) {
+    msgErro.textContent = 'Origem e destino não podem ser o mesmo aeroporto.';
+    msgErro.style.display = 'block';
+    return;
+  }
+  if (!nome || !dataIda || !dataVolta) {
+    msgErro.textContent = 'Preencha o nome e as duas datas.';
+    msgErro.style.display = 'block';
+    return;
+  }
+  if (dataVolta < dataIda) {
+    msgErro.textContent = 'A volta não pode ser antes da ida.';
     msgErro.style.display = 'block';
     return;
   }
@@ -349,6 +534,8 @@ function atualizarContador(){
   el.textContent = `${m}m ${s}s`;
 }
 
+montarAutocomplete('ac-origem','in-origem','lista-origem','sel-origem');
+montarAutocomplete('ac-destino','in-destino','lista-destino','sel-destino');
 document.getElementById('freq-label').textContent = `${POLL_SECONDS}s`;
 carregarDestinos();
 setInterval(carregarOfertas, POLL_SECONDS*1000);
