@@ -44,6 +44,14 @@
   .tab:hover{border-color:var(--sky);}
   .tab.ativo{background:linear-gradient(135deg, rgba(212,168,67,.18), rgba(212,168,67,.06)); border-color:var(--gold); color:var(--gold);}
   .tab.add{border-style:dashed;}
+  .tab{display:inline-flex; align-items:center; gap:2px;}
+  .tab-rotulo{cursor:pointer;}
+  .tab-fechar{
+    background:none; border:none; color:inherit; opacity:.45;
+    font-size:16px; line-height:1; padding:0 0 0 8px; margin-left:2px;
+    cursor:pointer; font-family:inherit;
+  }
+  .tab-fechar:hover{opacity:1; color:var(--bad);}
 
   /* ---- Route card ---- */
   .route-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px 24px; margin-bottom:20px; position:relative; overflow:hidden;}
@@ -234,6 +242,21 @@ async function supaGet(path) {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
   });
   if (!res.ok) throw new Error(`Erro Supabase: ${res.status}`);
+  return res.json();
+}
+
+async function supaPatch(path, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`Erro ao remover: ${res.status}`);
   return res.json();
 }
 
@@ -472,16 +495,68 @@ async function adicionarDestino(){
   }
 }
 
+async function removerDestino(d){
+  const senha = prompt('Remover "' + d.nome_destino + '" da lista?\n\nO histórico de preços continua salvo — o destino só deixa de ser monitorado.\n\nDigite a senha para confirmar:');
+  if (senha === null) return;              // cancelou
+  if (senha !== SENHA_DESTINO) { alert('Senha incorreta. Nada foi removido.'); return; }
+
+  try {
+    await supaPatch('destinos_monitorados?id=eq.' + d.id, { ativo: false });
+    destinos = destinos.filter(x => x.id !== d.id);
+    if (destinoAtivoId === d.id) destinoAtivoId = destinos.length ? destinos[0].id : null;
+    renderizarTabs();
+    if (destinoAtivoId) {
+      await carregarOfertas();
+    } else {
+      document.getElementById('rota-origem').textContent = '—';
+      document.getElementById('rota-destino').textContent = '—';
+      document.getElementById('melhor-preco').textContent = '—';
+      document.getElementById('melhor-cia').textContent = '—';
+      document.getElementById('total-ofertas').textContent = '0';
+      document.getElementById('ultima-atualizacao').textContent = '—';
+      document.getElementById('proxima-varredura').textContent = '—';
+      document.getElementById('tabela-corpo').innerHTML =
+        '<tr><td colspan="5" class="empty">Nenhum destino monitorado. Clique em "+ adicionar destino".</td></tr>';
+      if (chart) { chart.destroy(); chart = null; }
+    }
+  } catch (err) {
+    alert('Não consegui remover: ' + err.message);
+  }
+}
+
 function renderizarTabs(){
   const el = document.getElementById('lista-tabs');
   el.innerHTML = '';
   destinos.forEach(d => {
     const tab = document.createElement('span');
     tab.className = 'tab' + (d.id === destinoAtivoId ? ' ativo' : '');
-    tab.textContent = d.nome_destino;
-    tab.onclick = () => { destinoAtivoId = d.id; renderizarTabs(); carregarOfertas(); };
+
+    const rotulo = document.createElement('span');
+    rotulo.className = 'tab-rotulo';
+    rotulo.textContent = d.nome_destino;
+    rotulo.onclick = () => { destinoAtivoId = d.id; renderizarTabs(); carregarOfertas(); };
+
+    const fechar = document.createElement('button');
+    fechar.className = 'tab-fechar';
+    fechar.type = 'button';
+    fechar.title = 'Remover este destino';
+    fechar.setAttribute('aria-label', 'Remover ' + d.nome_destino);
+    fechar.textContent = '×';
+    fechar.onclick = (ev) => { ev.stopPropagation(); removerDestino(d); };
+
+    tab.appendChild(rotulo);
+    tab.appendChild(fechar);
     el.appendChild(tab);
   });
+
+  if (!destinos.length) {
+    const vazio = document.createElement('span');
+    vazio.className = 'tab';
+    vazio.style.opacity = '.6';
+    vazio.style.cursor = 'default';
+    vazio.textContent = 'Nenhum destino monitorado';
+    el.appendChild(vazio);
+  }
   const addTab = document.createElement('span');
   addTab.className = 'tab add';
   addTab.textContent = '+ adicionar destino';
