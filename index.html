@@ -98,6 +98,10 @@
 
   /* ---- Autocomplete de aeroportos ---- */
   .ac-wrap{position:relative;}
+  .ac-wrap::after{
+    content:'▾'; position:absolute; right:12px; top:34px;
+    color:var(--muted); pointer-events:none; font-size:12px;
+  }
   .ac-lista{
     display:none; position:absolute; left:0; right:0; top:100%; z-index:60;
     background:#0E1830; border:1px solid var(--line); border-radius:10px;
@@ -185,14 +189,14 @@
     <div class="campo"><label>Nome (ex: Recife → Cancún)</label><input id="in-nome" type="text" placeholder="Recife -> Orlando (Disney)"></div>
     <div class="campo ac-wrap">
       <label>Origem</label>
-      <input id="ac-origem" type="text" autocomplete="off" placeholder="Digite a cidade (ex: Recife)">
+      <input id="ac-origem" type="text" autocomplete="off" placeholder="Clique e escolha, ou digite a cidade">
       <input id="in-origem" type="hidden">
       <div class="ac-lista" id="lista-origem"></div>
       <div class="ac-sel" id="sel-origem"></div>
     </div>
     <div class="campo ac-wrap">
       <label>Destino</label>
-      <input id="ac-destino" type="text" autocomplete="off" placeholder="Digite a cidade (ex: Orlando)">
+      <input id="ac-destino" type="text" autocomplete="off" placeholder="Clique e escolha, ou digite a cidade">
       <input id="in-destino" type="hidden">
       <div class="ac-lista" id="lista-destino"></div>
       <div class="ac-sel" id="sel-destino"></div>
@@ -296,6 +300,11 @@ function termosDeBusca(t){
   return lista;
 }
 
+// Aeroportos sugeridos ao abrir o campo, antes de digitar qualquer coisa.
+const SUGERIDOS = ['REC','JPA','NAT','MCZ','FOR','SSA','GRU','CGH','GIG','BSB',
+'CNF','POA','CWB','MCO','MIA','JFK','LAX','LIS','OPO','MAD','BCN','CDG','LHR',
+'FCO','MEX','CUN','PTY','EZE','SCL','BOG','LIM','YYZ','DXB','NRT'];
+
 function montarAutocomplete(idInput, idHidden, idLista, idSel){
   const inp = document.getElementById(idInput);
   const hid = document.getElementById(idHidden);
@@ -317,7 +326,7 @@ function montarAutocomplete(idInput, idHidden, idLista, idSel){
   function buscar(termo){
     const dados = window.AEROPORTOS || [];
     const t = semAcento(termo.trim());
-    if (t.length < 2) return [];
+    if (t.length < 1) return [];
     const termos = termosDeBusca(t);
     const exatos = [], comeca = [], contem = [];
     for (const a of dados) {
@@ -338,13 +347,23 @@ function montarAutocomplete(idInput, idHidden, idLista, idSel){
     return exatos.concat(comeca, contem).slice(0, 40);
   }
 
+  function listaInicial(){
+    const dados = window.AEROPORTOS || [];
+    const mapa = {};
+    dados.forEach(function(a){ mapa[a[0]] = a; });
+    return SUGERIDOS.map(function(c){ return mapa[c]; }).filter(Boolean);
+  }
+
   function render(){
     if (!resultados.length) {
       lista.innerHTML = '<div class="ac-vazio">Nenhum aeroporto encontrado. Tente o nome da cidade.</div>';
       lista.classList.add('aberta');
       return;
     }
-    lista.innerHTML = resultados.map(function(a, i){
+    const cabecalho = (!inp.value.trim())
+      ? '<div class="ac-vazio" style="border-bottom:1px solid var(--line)">Sugestões — ou digite para buscar entre 5.739 aeroportos</div>'
+      : '';
+    lista.innerHTML = cabecalho + resultados.map(function(a, i){
       return '<div class="ac-item' + (i === indiceAtivo ? ' ativo' : '') + '" data-i="' + i + '">' +
         '<span class="ac-cod">' + a[0] + '</span>' +
         '<span class="ac-cidade">' + a[1] + '</span>' +
@@ -357,12 +376,26 @@ function montarAutocomplete(idInput, idHidden, idLista, idSel){
     });
   }
 
+  function abrirSugestoes(){
+    resultados = listaInicial();
+    indiceAtivo = -1;
+    render();
+  }
+
+  inp.addEventListener('focus', function(){
+    if (!inp.value.trim()) abrirSugestoes();
+  });
+
+  inp.addEventListener('click', function(){
+    if (!inp.value.trim()) abrirSugestoes();
+  });
+
   inp.addEventListener('input', function(){
     hid.value = '';
     sel.classList.remove('ok');
-    resultados = buscar(inp.value);
     indiceAtivo = -1;
-    if (inp.value.trim().length < 2) { fechar(); return; }
+    if (!inp.value.trim()) { abrirSugestoes(); return; }
+    resultados = buscar(inp.value);
     render();
   });
 
