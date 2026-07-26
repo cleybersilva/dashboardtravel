@@ -319,7 +319,7 @@
       </div>
       <div class="live-indicator"><span class="dot"></span>Sistema ativo</div>
     </div>
-    <div class="eyebrow">Varredura automática · a cada 1 hora</div>
+    <div class="eyebrow">Varredura automática · a cada 30 minutos</div>
     <h1>Dashboard <span>Travel</span></h1>
     <div class="sub">Acompanhe vários destinos ao mesmo tempo</div>
   </header>
@@ -379,7 +379,7 @@
     <div class="footer-conteudo">
       <div class="footer-status">
         <span class="dot"></span>
-        Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam a cada 1h via N8N
+        Tela atualiza sozinha a cada <span id="freq-label">60s</span> · dados novos chegam a cada 30min via N8N
       </div>
       <div class="footer-selos">
         <span class="selo">N8N</span>
@@ -806,7 +806,7 @@ async function carregarOfertas(){
   // e mais honesto do que so atualizar quando ha dado (evita parecer "parado").
   if (destinoAtual.ultima_tentativa) {
     document.getElementById('ultima-atualizacao').textContent = formatarHora(destinoAtual.ultima_tentativa);
-    proximaVarreduraTimestamp = new Date(destinoAtual.ultima_tentativa).getTime() + 60*60*1000;
+    proximaVarreduraTimestamp = new Date(destinoAtual.ultima_tentativa).getTime() + 30*60*1000;
   } else {
     document.getElementById('ultima-atualizacao').textContent = 'ainda não verificado';
     proximaVarreduraTimestamp = null;
