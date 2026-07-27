@@ -894,7 +894,9 @@ function montarMapaAeroportosPorIata(){
 }
 
 function cartaoMundo(p, info){
-  const cidade = info ? info[1] : p.destino_iata;
+  const metroBr = CIDADE_METRO_BR[p.destino_iata];
+  const metroMundo = CIDADE_METRO_MUNDO[p.destino_iata];
+  const cidade = metroBr ? metroBr.nome : (metroMundo ? metroMundo.nome : (info ? info[1] : p.destino_iata));
   const link = 'https://www.google.com/travel/flights?q=' +
     encodeURIComponent('voos de Recife para ' + cidade);
   return `
@@ -906,6 +908,23 @@ function cartaoMundo(p, info){
       <a href="${link}" target="_blank" rel="noopener">✈ Ver →</a>
     </div>`;
 }
+
+// Alguns codigos que o Travelpayouts devolve sao de CIDADE/REGIAO, nao de
+// um aeroporto especifico (ex: SAO = São Paulo qualquer aeroporto, LON =
+// Londres qualquer aeroporto) - esses nao existem no dataset de aeroportos
+// (que so tem aeroportos reais), entao tratamos a parte.
+const CIDADE_METRO_BR = {
+  SAO:{estado:'SP', nome:'São Paulo'}, RIO:{estado:'RJ', nome:'Rio de Janeiro'},
+  BHZ:{estado:'MG', nome:'Belo Horizonte'}, REC:{estado:'PE', nome:'Recife'},
+  BSB:{estado:'DF', nome:'Brasília'}, SSA:{estado:'BA', nome:'Salvador'}
+};
+const CIDADE_METRO_MUNDO = {
+  LON:{pais:'Reino Unido', nome:'Londres'}, PAR:{pais:'França', nome:'Paris'},
+  MOW:{pais:'Rússia', nome:'Moscou'}, NYC:{pais:'Estados Unidos', nome:'Nova York'},
+  BUE:{pais:'Argentina', nome:'Buenos Aires'}, TYO:{pais:'Japão', nome:'Tóquio'},
+  CHI:{pais:'Estados Unidos', nome:'Chicago'}, WAS:{pais:'Estados Unidos', nome:'Washington'},
+  MIL:{pais:'Itália', nome:'Milão'}, ROM:{pais:'Itália', nome:'Roma'}
+};
 
 async function carregarDescubraDestinos(){
   const elBrasil = document.getElementById('mundo-lista-brasil');
@@ -919,7 +938,9 @@ async function carregarDescubraDestinos(){
     const brasil = [], mundo = [];
     promos.forEach(function(p){
       const info = mapa[p.destino_iata];
-      const ehBrasil = (typeof BR_ESTADOS !== 'undefined' && BR_ESTADOS[p.destino_iata]) || (info && info[2] === 'Brasil');
+      const ehBrasil = CIDADE_METRO_BR[p.destino_iata] ||
+        (typeof BR_ESTADOS !== 'undefined' && BR_ESTADOS[p.destino_iata]) ||
+        (info && info[2] === 'Brasil');
       (ehBrasil ? brasil : mundo).push(p);
     });
 
