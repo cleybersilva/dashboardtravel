@@ -425,6 +425,34 @@
     <div class="sub">Acompanhe vários destinos ao mesmo tempo</div>
   </header>
 
+  <div class="tabs" id="lista-tabs">
+    <span class="tab" style="opacity:.5;">Carregando destinos...</span>
+  </div>
+
+  <div class="route-card">
+    <div class="route-row">
+      <div class="airport"><div class="code" id="rota-origem">—</div><div class="city">Origem</div></div>
+      <div class="route-line"><div class="plane">✈️</div></div>
+      <div class="airport"><div class="code" id="rota-destino">—</div><div class="city">Destino</div></div>
+    </div>
+    <div class="scan-meta">
+      <div><span class="dot"></span>Última varredura: <b id="ultima-atualizacao">—</b></div>
+      <div>Próxima varredura em: <b id="proxima-varredura">—</b></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat highlight">
+      <div class="label">Melhor preço encontrado</div>
+      <div class="value" id="melhor-preco">—</div>
+      <div class="tendencia" id="tendencia"></div>
+      <a id="btn-comprar-melhor" class="btn-comprar" href="#" target="_blank" rel="noopener" style="display:none;">✈ Comprar agora →</a>
+    </div>
+    <div class="stat"><div class="label">Companhia</div><div class="value" id="melhor-cia" style="font-size:17px;">—</div></div>
+    <div class="stat"><div class="label">Preço médio</div><div class="value" id="preco-medio" style="font-size:20px;">—</div></div>
+    <div class="stat"><div class="label">Verificações registradas</div><div class="value" id="total-ofertas">—</div></div>
+  </div>
+
   <div class="panel promo-topo">
     <div class="panel-cabecalho">
       <h2>🔥 Melhores promoções agora</h2>
@@ -452,34 +480,6 @@
         <div class="empty">Aguardando a próxima varredura…</div>
       </div>
     </div>
-  </div>
-
-  <div class="tabs" id="lista-tabs">
-    <span class="tab" style="opacity:.5;">Carregando destinos...</span>
-  </div>
-
-  <div class="route-card">
-    <div class="route-row">
-      <div class="airport"><div class="code" id="rota-origem">—</div><div class="city">Origem</div></div>
-      <div class="route-line"><div class="plane">✈️</div></div>
-      <div class="airport"><div class="code" id="rota-destino">—</div><div class="city">Destino</div></div>
-    </div>
-    <div class="scan-meta">
-      <div><span class="dot"></span>Última varredura: <b id="ultima-atualizacao">—</b></div>
-      <div>Próxima varredura em: <b id="proxima-varredura">—</b></div>
-    </div>
-  </div>
-
-  <div class="stats">
-    <div class="stat highlight">
-      <div class="label">Melhor preço encontrado</div>
-      <div class="value" id="melhor-preco">—</div>
-      <div class="tendencia" id="tendencia"></div>
-      <a id="btn-comprar-melhor" class="btn-comprar" href="#" target="_blank" rel="noopener" style="display:none;">✈ Comprar agora →</a>
-    </div>
-    <div class="stat"><div class="label">Companhia</div><div class="value" id="melhor-cia" style="font-size:17px;">—</div></div>
-    <div class="stat"><div class="label">Preço médio</div><div class="value" id="preco-medio" style="font-size:20px;">—</div></div>
-    <div class="stat"><div class="label">Verificações registradas</div><div class="value" id="total-ofertas">—</div></div>
   </div>
 
   <div class="panel">
