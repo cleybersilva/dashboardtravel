@@ -154,6 +154,29 @@
 
   /* ---- Melhores promoções (topo) ---- */
   .promo-topo{margin-bottom:22px;}
+
+  /* ---- Descubra novos destinos (mundo, alem dos cadastrados) ---- */
+  .mundo-grupo{margin-top:14px;}
+  .mundo-grupo:first-of-type{margin-top:4px;}
+  .mundo-grupo-titulo{font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;}
+  .mundo-lista{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scroll-snap-type:x proximity;}
+  .mundo-lista::-webkit-scrollbar{height:5px;}
+  .mundo-lista::-webkit-scrollbar-thumb{background:var(--line); border-radius:99px;}
+  .mundo-card{
+    flex:0 0 auto; scroll-snap-align:start; min-width:140px;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    transition:transform .2s ease, border-color .2s ease;
+  }
+  .mundo-card:hover{transform:translateY(-2px); border-color:rgba(79,163,209,.4);}
+  .mundo-card .cod{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--sky);}
+  .mundo-card .nome{font-size:12.5px; font-weight:600; margin-top:2px; white-space:nowrap;}
+  .mundo-card .preco{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--gold); font-size:15px; margin-top:5px;}
+  .mundo-card .cia{font-size:10px; color:var(--muted); margin-top:1px;}
+  .mundo-card a{
+    display:inline-block; margin-top:7px; font-size:10px; font-weight:700; color:#1a1204;
+    background:linear-gradient(135deg,var(--gold),#F0CB74); padding:3px 9px; border-radius:999px; text-decoration:none;
+  }
+  @media (max-width:640px){ .mundo-card{min-width:120px; padding:10px;} }
   .promo-selo-atualiza{
     font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace;
     display:flex; align-items:center; gap:6px; white-space:nowrap;
@@ -409,6 +432,25 @@
     </div>
     <div class="promo-grid" id="promo-grid">
       <div class="empty">Carregando promoções…</div>
+    </div>
+  </div>
+
+  <div class="panel promo-topo">
+    <div class="panel-cabecalho">
+      <h2>🌎 Descubra novos destinos</h2>
+      <span class="promo-selo-atualiza"><span class="dot"></span>qualquer lugar do mundo · a partir de Recife</span>
+    </div>
+    <div class="mundo-grupo">
+      <div class="mundo-grupo-titulo">🇧🇷 Brasil</div>
+      <div class="mundo-lista" id="mundo-lista-brasil">
+        <div class="empty">Aguardando a próxima varredura…</div>
+      </div>
+    </div>
+    <div class="mundo-grupo">
+      <div class="mundo-grupo-titulo">🌍 Internacional</div>
+      <div class="mundo-lista" id="mundo-lista-internacional">
+        <div class="empty">Aguardando a próxima varredura…</div>
+      </div>
     </div>
   </div>
 
@@ -839,6 +881,61 @@ function resolverLocal(codigoIata){
   return { texto: pais, bandeira: FLAG_PAIS[pais] || '🌍' };
 }
 
+// ================= Descubra novos destinos (mundo) =================
+// Le a tabela promocoes_globais (gravada pelo N8N a partir do
+// endpoint city-directions do Travelpayouts), separa Brasil x
+// resto do mundo reaproveitando BR_ESTADOS e o dataset de aeroportos.
+let mapaAeroportosPorIata = null;
+function montarMapaAeroportosPorIata(){
+  if (mapaAeroportosPorIata) return mapaAeroportosPorIata;
+  mapaAeroportosPorIata = {};
+  (window.AEROPORTOS || []).forEach(function(a){ mapaAeroportosPorIata[a[0]] = a; });
+  return mapaAeroportosPorIata;
+}
+
+function cartaoMundo(p, info){
+  const cidade = info ? info[1] : p.destino_iata;
+  const link = 'https://www.google.com/travel/flights?q=' +
+    encodeURIComponent('voos de Recife para ' + cidade);
+  return `
+    <div class="mundo-card">
+      <div class="cod">${p.destino_iata}</div>
+      <div class="nome">${cidade}</div>
+      <div class="preco">${formatarBRL(p.preco)}</div>
+      <div class="cia">${p.cia_aerea || '—'}</div>
+      <a href="${link}" target="_blank" rel="noopener">✈ Ver →</a>
+    </div>`;
+}
+
+async function carregarDescubraDestinos(){
+  const elBrasil = document.getElementById('mundo-lista-brasil');
+  const elMundo = document.getElementById('mundo-lista-internacional');
+  if (!elBrasil || !elMundo) return;
+  try {
+    const promos = await supaGet('promocoes_globais?select=*&order=preco.asc&limit=60');
+    if (!promos.length) return; // mantem a mensagem de "aguardando" ja no HTML
+
+    const mapa = montarMapaAeroportosPorIata();
+    const brasil = [], mundo = [];
+    promos.forEach(function(p){
+      const info = mapa[p.destino_iata];
+      const ehBrasil = (typeof BR_ESTADOS !== 'undefined' && BR_ESTADOS[p.destino_iata]) || (info && info[2] === 'Brasil');
+      (ehBrasil ? brasil : mundo).push(p);
+    });
+
+    elBrasil.innerHTML = brasil.length
+      ? brasil.slice(0,10).map(function(p){ return cartaoMundo(p, mapa[p.destino_iata]); }).join('')
+      : '<div class="empty">Nenhuma promoção nacional encontrada ainda.</div>';
+
+    elMundo.innerHTML = mundo.length
+      ? mundo.slice(0,10).map(function(p){ return cartaoMundo(p, mapa[p.destino_iata]); }).join('')
+      : '<div class="empty">Nenhuma promoção internacional encontrada ainda.</div>';
+  } catch (err) {
+    elBrasil.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
+    elMundo.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
+  }
+}
+
 async function carregarMelhoresPromocoes(){
   const grid = document.getElementById('promo-grid');
   if (!grid) return;
@@ -997,6 +1094,7 @@ async function carregarDestinos(){
   renderizarTabs();
   if (destinos.length) await carregarOfertas();
   carregarMelhoresPromocoes();
+  carregarDescubraDestinos();
 }
 
 async function carregarOfertas(){
@@ -1156,6 +1254,7 @@ document.getElementById('freq-label').textContent = `${POLL_SECONDS}s`;
 carregarDestinos();
 setInterval(carregarOfertas, POLL_SECONDS*1000);
 setInterval(carregarMelhoresPromocoes, POLL_SECONDS*1000);
+setInterval(carregarDescubraDestinos, POLL_SECONDS*1000);
 setInterval(atualizarContador, 1000);
 </script>
 </body>
