@@ -1007,6 +1007,11 @@ async function carregarDescubraDestinos(){
     elMundo.innerHTML = mundo.length
       ? mundo.slice(0,10).map(function(p){ return cartaoMundo(p, mapa[p.destino_iata]); }).join('')
       : '<div class="empty">Nenhuma promoção internacional encontrada ainda.</div>';
+
+    // sempre volta pro inicio ao atualizar - senao a lista fica "rolada"
+    // de uma atualizacao anterior e o primeiro card aparece cortado
+    elBrasil.scrollLeft = 0;
+    elMundo.scrollLeft = 0;
   } catch (err) {
     elBrasil.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
     elMundo.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
