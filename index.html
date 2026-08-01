@@ -436,8 +436,19 @@
     .footer-status{justify-content:center; text-align:center; flex-wrap:wrap;}
     .footer-selos{justify-content:center;}
     .footer-marca{text-align:center;}
+
+    /* Mundo/promocoes: no mobile vira grade que quebra linha (rola so
+       verticalmente, junto com o resto da pagina) em vez de lista que
+       rola de lado - assim TODOS os resultados ficam visiveis descendo
+       a tela, sem depender de arrastar horizontalmente. */
+    .mundo-lista{
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+      overflow-x:visible; padding:0; scroll-snap-type:none;
+    }
+    .mundo-card{min-width:0; width:100%;}
     .scan-meta{flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:6px;}
-    .promo-lista, .mundo-lista{padding:4px 24px 10px 2px;}
+    .promo-lista{padding:4px 24px 10px 2px;}
+    .mundo-lista{padding:4px 0 10px;}
     .tabs{justify-content:center;}
   }
 
