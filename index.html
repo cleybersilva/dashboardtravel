@@ -392,6 +392,48 @@
     padding:6px 12px; border-radius:999px;
   }
   @media (prefers-reduced-motion: reduce){ .brand-mark{animation:none;} }
+  /* ================================================================
+     Ajustes finais de mobile: corrige estouro horizontal da pagina
+     e centraliza textos/elementos. Fica por ultimo de proposito,
+     pra ter prioridade sobre as regras mobile anteriores.
+     ================================================================ */
+  html{overflow-x:hidden; max-width:100%;}
+
+  .tabela-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+
+  @media (max-width:640px){
+    html, body{overflow-x:hidden; width:100%;}
+    .wrap{overflow-x:hidden; max-width:100%; padding:0 2px;}
+
+    /* tabela rola dentro da propria caixa, nunca estica a pagina */
+    .tabela-scroll{margin:0 -4px;}
+    .tabela-scroll table{min-width:620px; font-size:12px;}
+    .tabela-scroll th, .tabela-scroll td{padding:8px 6px !important; white-space:nowrap;}
+
+    /* centralizacao geral de textos e blocos */
+    .header-top{justify-content:center; flex-wrap:wrap; gap:10px; text-align:center;}
+    .eyebrow, .sub{text-align:center;}
+    h1{text-align:center;}
+    .promo-globais-topo, .panel-cabecalho{flex-direction:column; align-items:center; text-align:center; gap:8px;}
+    .promo-grupo-titulo, .mundo-grupo-titulo{text-align:center;}
+    .mundo-lista, .promo-lista, .promo-grid{justify-content:center;}
+    .stat{text-align:center;}
+    .stat .label, .stat .value{text-align:center;}
+    .route-row{align-items:center; text-align:center;}
+    .airport{text-align:center;}
+    #rota-origem, #rota-destino{text-align:center; width:100%;}
+    .footer-conteudo{align-items:center; text-align:center; justify-content:center;}
+    .footer-status{justify-content:center; text-align:center; flex-wrap:wrap;}
+    .footer-selos{justify-content:center;}
+    .footer-marca{text-align:center;}
+    .tabs{justify-content:center;}
+    .modal{left:50%; transform:translateX(-50%); margin:0;}
+  }
+
+  @media (max-width:380px){
+    .stats{grid-template-columns:1fr 1fr;}
+    .promo-grid{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>
@@ -493,10 +535,12 @@
       <button type="button" class="painel-fechar" id="btn-fechar-ofertas" title="Ocultar esta seção" aria-label="Fechar Últimas ofertas encontradas">×</button>
     </div>
     <div class="panel-corpo" id="corpo-ofertas">
+      <div class="tabela-scroll">
       <table>
         <thead><tr><th>Preço</th><th>Cia aérea</th><th>Paradas</th><th>Fonte</th><th>Encontrado em</th><th></th><th></th></tr></thead>
         <tbody id="tabela-corpo"><tr><td colspan="7" class="empty">Configure SUPABASE_URL e SUPABASE_ANON_KEY no código.</td></tr></tbody>
       </table>
+      </div>
     </div>
   </div>
   <div class="panel-reabrir" id="painel-ofertas-fechado" style="display:none;">
