@@ -169,11 +169,11 @@
   .mundo-grupo{margin-top:14px;}
   .mundo-grupo:first-of-type{margin-top:4px;}
   .mundo-grupo-titulo{font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;}
-  .mundo-lista{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; scroll-snap-type:x proximity;}
+  .mundo-lista{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px;}
   .mundo-lista::-webkit-scrollbar{height:5px;}
   .mundo-lista::-webkit-scrollbar-thumb{background:var(--line); border-radius:99px;}
   .mundo-card{
-    flex:0 0 auto; scroll-snap-align:start; min-width:140px;
+    flex:0 0 auto; min-width:140px;
     background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
     transition:transform .2s ease, border-color .2s ease;
   }
@@ -1009,9 +1009,14 @@ async function carregarDescubraDestinos(){
       : '<div class="empty">Nenhuma promoção internacional encontrada ainda.</div>';
 
     // sempre volta pro inicio ao atualizar - senao a lista fica "rolada"
-    // de uma atualizacao anterior e o primeiro card aparece cortado
-    elBrasil.scrollLeft = 0;
-    elMundo.scrollLeft = 0;
+    // de uma atualizacao anterior e o primeiro card aparece cortado.
+    // O atraso é necessário: setar direto às vezes é sobrescrito pelo
+    // próprio ajuste de "encaixe" (scroll-snap) do navegador logo em seguida.
+    requestAnimationFrame(function(){
+      elBrasil.scrollLeft = 0;
+      elMundo.scrollLeft = 0;
+      setTimeout(function(){ elBrasil.scrollLeft = 0; elMundo.scrollLeft = 0; }, 50);
+    });
   } catch (err) {
     elBrasil.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
     elMundo.innerHTML = '<div class="empty">Ainda não configurado — aguarde a próxima atualização.</div>';
