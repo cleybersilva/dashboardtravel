@@ -364,6 +364,16 @@
   .btn-primario{background:var(--gold); color:#1a1204; flex:1;}
   .btn-secundario{background:var(--surface-2); color:var(--text); border:1px solid var(--line);}
   .msg-erro{color:var(--bad); font-size:12.5px; margin-top:8px; display:none;}
+  .aviso-varredura{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--surface); border:1px solid rgba(212,168,67,.4); color:var(--text);
+    padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:100;
+    animation:aviso-entra .3s ease;
+  }
+  .aviso-varredura.sumindo{animation:aviso-sai .6s ease forwards;}
+  @keyframes aviso-entra{from{opacity:0; transform:translateX(-50%) translateY(12px);} to{opacity:1; transform:translateX(-50%) translateY(0);}}
+  @keyframes aviso-sai{to{opacity:0; transform:translateX(-50%) translateY(12px);}}
 
   footer{margin-top:36px;}
   .footer-linha{
@@ -1009,13 +1019,37 @@ async function adicionarDestino(){
       payload.whatsapp_telefone = whatsappTelefone;
       payload.whatsapp_apikey = whatsappApikey;
     }
-    await supaPost('destinos_monitorados', payload);
+    const inserido = await supaPost('destinos_monitorados', payload);
     fecharModal();
     await carregarDestinos();
+
+    // dispara a varredura imediata SO deste destino novo, via webhook do N8N.
+    // "fire and forget": nao trava a tela nem impede o uso do dashboard
+    // enquanto roda em segundo plano (leva uns 10-20s).
+    const novoId = inserido && inserido[0] && inserido[0].id;
+    if (novoId) {
+      mostrarAvisoVarreduraImediata();
+      fetch('https://n8n-n8n.z0xxlp.easypanel.host/webhook/novo-destino-msao402h', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({destino_id: novoId})
+      }).then(function(){
+        setTimeout(carregarDestinos, 12000); // da tempo da varredura terminar e recarrega
+      }).catch(function(){});
+    }
   } catch (err) {
     msgErro.textContent = `Erro ao adicionar: ${err.message}`;
     msgErro.style.display = 'block';
   }
+}
+
+function mostrarAvisoVarreduraImediata(){
+  const aviso = document.createElement('div');
+  aviso.className = 'aviso-varredura';
+  aviso.innerHTML = '🔍 Verificando o preço deste destino agora…';
+  document.body.appendChild(aviso);
+  setTimeout(function(){ aviso.classList.add('sumindo'); }, 4500);
+  setTimeout(function(){ aviso.remove(); }, 5200);
 }
 
 // ================= Melhores promoções (topo) =================
