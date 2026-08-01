@@ -286,6 +286,24 @@
   .modal{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px; max-width:420px; width:100%;}
   .modal h3{font-family:'Playfair Display',serif; font-size:19px; margin-bottom:16px;}
   .campo{margin-bottom:12px;}
+  .campo-toggle{margin:16px 0;}
+  .toggle-linha{
+    display:flex; align-items:flex-start; gap:10px; cursor:pointer;
+    font-size:13px; color:var(--text); line-height:1.4;
+  }
+  .toggle-linha input[type="checkbox"]{
+    width:18px; height:18px; margin-top:1px; accent-color:var(--gold); cursor:pointer; flex-shrink:0;
+  }
+  .whatsapp-instrucoes{
+    background:rgba(92,184,138,.07); border:1px solid rgba(92,184,138,.25); border-radius:10px;
+    padding:12px 14px; margin-bottom:14px; font-size:12px; color:var(--muted); line-height:1.6;
+  }
+  .whatsapp-instrucoes b{color:var(--text);}
+  .whatsapp-instrucoes ol{margin:6px 0 0 18px; padding:0;}
+  .whatsapp-instrucoes code{
+    background:var(--surface-2); color:var(--gold); padding:1px 6px; border-radius:4px;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+  }
   .campo label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
   .campo input{
     width:100%; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
@@ -625,6 +643,29 @@
       <div class="campo"><label>Data de ida</label><input id="in-data-ida" type="date"></div>
       <div class="campo"><label>Data de volta</label><input id="in-data-volta" type="date"></div>
     </div>
+
+    <div class="campo campo-toggle">
+      <label class="toggle-linha">
+        <input type="checkbox" id="in-quer-whatsapp" onchange="alternarCamposWhatsapp()">
+        <span>📲 Quero receber alertas <b>deste destino</b> no meu WhatsApp também</span>
+      </label>
+    </div>
+
+    <div id="bloco-whatsapp-pessoal" style="display:none;">
+      <div class="whatsapp-instrucoes">
+        <b>Antes de preencher:</b> seu WhatsApp precisa estar ativado no CallMeBot (é grátis, 1 minuto):
+        <ol>
+          <li>Salve o contato <b>+34 623 80 11 90</b></li>
+          <li>Mande por WhatsApp: <code>I allow callmebot to call me</code></li>
+          <li>Você vai receber sua <b>API Key</b> de volta — cole ela abaixo</li>
+        </ol>
+      </div>
+      <div class="campo"><label>Seu WhatsApp (com DDI+DDD, ex: 5581999999999)</label>
+        <input id="in-whatsapp-telefone" type="text" placeholder="5581999999999"></div>
+      <div class="campo"><label>Sua API Key do CallMeBot</label>
+        <input id="in-whatsapp-apikey" type="text" placeholder="123456"></div>
+    </div>
+
     <div class="msg-erro" id="msg-erro">Preencha todos os campos corretamente.</div>
     <div class="botoes">
       <button class="btn-secundario" onclick="fecharModal()">Cancelar</button>
@@ -861,15 +902,23 @@ function montarAutocomplete(idInput, idHidden, idLista, idSel){
 }
 
 function abrirModal(){ document.getElementById('overlay-modal').classList.add('aberto'); }
+function alternarCamposWhatsapp(){
+  const quer = document.getElementById('in-quer-whatsapp').checked;
+  document.getElementById('bloco-whatsapp-pessoal').style.display = quer ? 'block' : 'none';
+}
+
 function fecharModal(){
   document.getElementById('overlay-modal').classList.remove('aberto');
   document.getElementById('msg-erro').style.display = 'none';
-  ['ac-origem','ac-destino','in-origem','in-destino','in-nome'].forEach(function(id){
+  ['ac-origem','ac-destino','in-origem','in-destino','in-nome','in-whatsapp-telefone','in-whatsapp-apikey'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   ['sel-origem','sel-destino'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.classList.remove('ok');
   });
+  const chk = document.getElementById('in-quer-whatsapp');
+  if (chk) chk.checked = false;
+  document.getElementById('bloco-whatsapp-pessoal').style.display = 'none';
 }
 
 async function adicionarDestino(){
@@ -901,10 +950,24 @@ async function adicionarDestino(){
     return;
   }
 
+  const querWhatsapp = document.getElementById('in-quer-whatsapp').checked;
+  const whatsappTelefone = document.getElementById('in-whatsapp-telefone').value.trim();
+  const whatsappApikey = document.getElementById('in-whatsapp-apikey').value.trim();
+  if (querWhatsapp && (!whatsappTelefone || !whatsappApikey)) {
+    msgErro.textContent = 'Preencha seu WhatsApp e a API Key do CallMeBot, ou desmarque a opção.';
+    msgErro.style.display = 'block';
+    return;
+  }
+
   try {
-    await supaPost('destinos_monitorados', {
+    const payload = {
       nome_destino: nome, origem, destino, data_ida: dataIda, data_volta: dataVolta, ativo: true
-    });
+    };
+    if (querWhatsapp) {
+      payload.whatsapp_telefone = whatsappTelefone;
+      payload.whatsapp_apikey = whatsappApikey;
+    }
+    await supaPost('destinos_monitorados', payload);
     fecharModal();
     await carregarDestinos();
   } catch (err) {
