@@ -283,7 +283,10 @@
     align-items:center; justify-content:center; z-index:50; padding:20px;
   }
   .overlay.aberto{display:flex;}
-  .modal{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px; max-width:420px; width:100%;}
+  .modal{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px; max-width:420px; width:100%;
+    max-height:90vh; overflow-y:auto;
+  }
   .modal h3{font-family:'Playfair Display',serif; font-size:19px; margin-bottom:16px;}
   .campo{margin-bottom:12px;}
   .campo-toggle{margin:16px 0;}
