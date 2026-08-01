@@ -58,7 +58,17 @@
   }
   .tab:hover{border-color:var(--sky);}
   .tab.ativo{background:linear-gradient(135deg, rgba(212,168,67,.18), rgba(212,168,67,.06)); border-color:var(--gold); color:var(--gold);}
-  .tab.add{border-style:dashed;}
+  .tab.add{
+    border-style:solid; border-color:transparent;
+    background:linear-gradient(135deg, var(--gold), #F0CB74);
+    color:#1a1204; font-weight:700;
+    box-shadow:0 4px 14px rgba(212,168,67,.3);
+  }
+  .tab.add:hover{
+    transform:translateY(-2px) scale(1.02);
+    box-shadow:0 8px 22px rgba(212,168,67,.45);
+    border-color:transparent;
+  }
   .tab{display:inline-flex; align-items:center; gap:2px;}
   .tab-rotulo{cursor:pointer;}
   .tab-fechar{
